@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react'
 type CropRect = { x: number; y: number; width: number; height: number }
 
 type CropOverlayProps = {
-  image: HTMLImageElement
   containerWidth: number
   containerHeight: number
   imageBox: { left: number; top: number; width: number; height: number }
@@ -11,7 +10,7 @@ type CropOverlayProps = {
   onChange?: (rect: CropRect) => void
 }
 
-export default function CropOverlay({ image, containerWidth, containerHeight, imageBox, aspect, onChange }: CropOverlayProps) {
+export default function CropOverlay({ containerWidth, containerHeight, imageBox, aspect, onChange }: CropOverlayProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const [rect, setRect] = useState<CropRect>(() => {
     const iw = imageBox.width
@@ -116,7 +115,6 @@ export default function CropOverlay({ image, containerWidth, containerHeight, im
         setRect(r => ({ ...r, x: nx, y: ny }))
       } else if (mode === 'resize' && handle) {
         let { x, y, width, height } = startRect
-        let ndx = dx, ndy = dy
         if (handle === 'nw') { x += dx; y += dy; width -= dx; height -= dy }
         if (handle === 'ne') { y += dy; width += dx; height -= dy }
         if (handle === 'sw') { x += dx; width -= dx; height += dy }
