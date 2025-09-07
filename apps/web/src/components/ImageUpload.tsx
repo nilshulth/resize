@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import AspectRatioSelector, { AspectRatioOption } from './AspectRatioSelector'
 import CropOverlay from './CropOverlay'
 
@@ -209,7 +209,6 @@ export default function ImageUpload() {
             />
             {imgRef.current && imageBox && (
               <CropOverlay
-                image={imgRef.current}
                 containerWidth={containerSize.width}
                 containerHeight={containerSize.height}
                 imageBox={imageBox}
@@ -254,7 +253,6 @@ export default function ImageUpload() {
     if (!uploadedFile || !imgRef.current || !cropRect || !containerRef.current) return
     const img = imgRef.current
     // translate cropRect from displayed coordinates to natural image pixels
-    const bounds = containerRef.current.getBoundingClientRect()
     const displayedWidth = img.width
     const displayedHeight = img.height
     const scaleX = img.naturalWidth / displayedWidth
