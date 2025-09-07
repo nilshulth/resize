@@ -114,34 +114,65 @@ export default function CropOverlay({ containerWidth, containerHeight, imageBox,
         const ny = clamp(startRect.y + dy, bounds.top, bounds.top + bounds.height - startRect.height)
         setRect(r => ({ ...r, x: nx, y: ny }))
       } else if (mode === 'resize' && handle) {
-        let { x, y, width, height } = startRect
-        if (handle === 'nw') { x += dx; y += dy; width -= dx; height -= dy }
-        if (handle === 'ne') { y += dy; width += dx; height -= dy }
-        if (handle === 'sw') { x += dx; width -= dx; height += dy }
-        if (handle === 'se') { width += dx; height += dy }
-
-        // apply aspect constraint
-        const constrainAspect = aspectRef.current === 'original' ? (ibRef.current.width / ibRef.current.height) : (aspectRef.current as number)
-        const signW = width < 0 ? -1 : 1
-        const signH = height < 0 ? -1 : 1
-        const absW = Math.abs(width)
-        const absH = Math.abs(height)
-        if (absW / absH > constrainAspect) {
-          width = signW * (absH * constrainAspect)
-        } else {
-          height = signH * (absW / constrainAspect)
-        }
-        // recompute x/y for NW/NE/SW handles to keep anchored corner in place
-        if (handle === 'nw') { x = startRect.x + (startRect.width - width); y = startRect.y + (startRect.height - height) }
-        if (handle === 'ne') { y = startRect.y + (startRect.height - height) }
-        if (handle === 'sw') { x = startRect.x + (startRect.width - width) }
-
-        // clamp to bounds
-        if (width < 20 || height < 20) return
+        const aspect = aspectRef.current === 'original' ? (ibRef.current.width / ibRef.current.height) : (aspectRef.current as number)
+        const minSize = 20
         const bounds = ibRef.current
-        x = clamp(x, bounds.left, bounds.left + bounds.width - width)
-        y = clamp(y, bounds.top, bounds.top + bounds.height - height)
-        setRect({ x, y, width, height })
+
+        // Desired size change based on handle movement
+        let desiredW = startRect.width
+        let desiredH = startRect.height
+        if (handle === 'se') { desiredW = startRect.width + dx; desiredH = startRect.height + dy }
+        if (handle === 'ne') { desiredW = startRect.width + dx; desiredH = startRect.height - dy }
+        if (handle === 'sw') { desiredW = startRect.width - dx; desiredH = startRect.height + dy }
+        if (handle === 'nw') { desiredW = startRect.width - dx; desiredH = startRect.height - dy }
+
+        // Ensure positive sizes before aspect enforcement
+        desiredW = Math.max(minSize, desiredW)
+        desiredH = Math.max(minSize, desiredH)
+
+        // Project desired size to maintain aspect
+        let projW: number
+        let projH: number
+        if (desiredW / desiredH > aspect) {
+          projW = desiredH * aspect
+          projH = desiredH
+        } else {
+          projW = desiredW
+          projH = desiredW / aspect
+        }
+
+        // Determine anchor point and max sizes from anchor to bounds
+        let anchorX = startRect.x
+        let anchorY = startRect.y
+        if (handle === 'se') { anchorX = startRect.x; anchorY = startRect.y }
+        if (handle === 'ne') { anchorX = startRect.x; anchorY = startRect.y + startRect.height }
+        if (handle === 'sw') { anchorX = startRect.x + startRect.width; anchorY = startRect.y }
+        if (handle === 'nw') { anchorX = startRect.x + startRect.width; anchorY = startRect.y + startRect.height }
+
+        let maxW = 0
+        let maxH = 0
+        if (handle === 'se') { maxW = (bounds.left + bounds.width) - anchorX; maxH = (bounds.top + bounds.height) - anchorY }
+        if (handle === 'ne') { maxW = (bounds.left + bounds.width) - anchorX; maxH = anchorY - bounds.top }
+        if (handle === 'sw') { maxW = anchorX - bounds.left; maxH = (bounds.top + bounds.height) - anchorY }
+        if (handle === 'nw') { maxW = anchorX - bounds.left; maxH = anchorY - bounds.top }
+
+        // Clamp by bounds while keeping aspect: try width-first, then height-first
+        let w = Math.min(Math.max(projW, minSize), maxW)
+        let h = w / aspect
+        if (h > maxH) {
+          h = Math.min(Math.max(projH, minSize), maxH)
+          w = h * aspect
+        }
+
+        // Derive x,y from anchor and final size
+        let x = 0
+        let y = 0
+        if (handle === 'se') { x = anchorX; y = anchorY }
+        if (handle === 'ne') { x = anchorX; y = anchorY - h }
+        if (handle === 'sw') { x = anchorX - w; y = anchorY }
+        if (handle === 'nw') { x = anchorX - w; y = anchorY - h }
+
+        setRect({ x, y, width: w, height: h })
       }
     }
 

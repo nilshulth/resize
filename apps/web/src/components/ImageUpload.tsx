@@ -250,7 +250,7 @@ export default function ImageUpload() {
   )
 
   function doCrop() {
-    if (!uploadedFile || !imgRef.current || !cropRect || !containerRef.current) return
+    if (!uploadedFile || !imgRef.current || !cropRect || !containerRef.current || !imageBox) return
     const img = imgRef.current
     // translate cropRect from displayed coordinates to natural image pixels
     const displayedWidth = img.width
@@ -258,8 +258,12 @@ export default function ImageUpload() {
     const scaleX = img.naturalWidth / displayedWidth
     const scaleY = img.naturalHeight / displayedHeight
 
-    const sx = Math.max(0, Math.round(cropRect.x * scaleX))
-    const sy = Math.max(0, Math.round(cropRect.y * scaleY))
+    // rect is in container coords; convert to image-relative coords first
+    const relX = cropRect.x - imageBox.left
+    const relY = cropRect.y - imageBox.top
+
+    const sx = Math.max(0, Math.round(relX * scaleX))
+    const sy = Math.max(0, Math.round(relY * scaleY))
     const sw = Math.min(img.naturalWidth - sx, Math.round(cropRect.width * scaleX))
     const sh = Math.min(img.naturalHeight - sy, Math.round(cropRect.height * scaleY))
 
