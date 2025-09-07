@@ -1,0 +1,12 @@
+{
+  "name": "resize",
+  "private": true,
+  "scripts": {
+    "dev": "cd apps/web && pnpm dev",
+    "build": "cd apps/web && pnpm build",
+    "preview": "cd apps/web && pnpm preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
