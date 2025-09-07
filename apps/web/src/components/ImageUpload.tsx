@@ -7,6 +7,98 @@ interface UploadedFile {
   preview: string
 }
 
+// Minimal EXIF parser to read DateTimeOriginal (0x9003) from JPEGs
+async function readExifDateTaken(file: File): Promise<string | null> {
+  try {
+    if (file.type !== 'image/jpeg') return null
+    const buffer = await file.arrayBuffer()
+    const view = new DataView(buffer)
+    // JPEG SOI
+    if (view.getUint8(0) !== 0xFF || view.getUint8(1) !== 0xD8) return null
+    let offset = 2
+    while (offset + 4 <= view.byteLength) {
+      if (view.getUint8(offset) !== 0xFF) break
+      const marker = view.getUint8(offset + 1)
+      const size = view.getUint16(offset + 2, false)
+      if (marker === 0xE1) { // APP1
+        const start = offset + 4
+        // Check Exif header
+        if (start + 6 <= view.byteLength) {
+          const exifStr = String.fromCharCode(
+            view.getUint8(start), view.getUint8(start + 1), view.getUint8(start + 2),
+            view.getUint8(start + 3), view.getUint8(start + 4), view.getUint8(start + 5)
+          )
+          if (exifStr === 'Exif\u0000\u0000' || exifStr === 'Exif\x00\x00') {
+            const tiffBase = start + 6
+            if (tiffBase + 8 > view.byteLength) return null
+            const little = (String.fromCharCode(view.getUint8(tiffBase)) === 'I')
+            const getU16 = (off: number) => view.getUint16(off, little)
+            const getU32 = (off: number) => view.getUint32(off, little)
+            const ifd0Offset = getU32(tiffBase + 4)
+            const ifd0 = tiffBase + ifd0Offset
+            const readAscii = (valueOff: number, count: number): string => {
+              const startOff = count > 4 ? (tiffBase + valueOff) : valueOff
+              let s = ''
+              for (let i = 0; i < count && (startOff + i) < view.byteLength; i++) {
+                const ch = view.getUint8(startOff + i)
+                if (ch === 0) break
+                s += String.fromCharCode(ch)
+              }
+              return s
+            }
+            const findTagInIfd = (ifdOff: number, tagToFind: number): { type: number; count: number; valueOff: number } | null => {
+              if (ifdOff + 2 > view.byteLength) return null
+              const num = getU16(ifdOff)
+              let entry = ifdOff + 2
+              for (let i = 0; i < num; i++) {
+                if (entry + 12 > view.byteLength) break
+                const tag = getU16(entry)
+                const type = getU16(entry + 2)
+                const count = getU32(entry + 4)
+                const valueOff = getU32(entry + 8)
+                if (tag === tagToFind) return { type, count, valueOff }
+                entry += 12
+              }
+              return null
+            }
+
+            // Try DateTimeOriginal in ExifIFD (pointed by 0x8769 in IFD0)
+            const exifPtr = findTagInIfd(ifd0, 0x8769)
+            if (exifPtr) {
+              const exifIfd = tiffBase + exifPtr.valueOff
+              const dto = findTagInIfd(exifIfd, 0x9003)
+              if (dto && dto.type === 2 /* ASCII */) {
+                const s = readAscii(dto.valueOff, dto.count)
+                return s || null
+              }
+            }
+            // Fallback: DateTime in IFD0 (0x0132)
+            const dt = findTagInIfd(ifd0, 0x0132)
+            if (dt && dt.type === 2) {
+              const s = readAscii(dt.valueOff, dt.count)
+              return s || null
+            }
+          }
+        }
+      }
+      if (size < 2) break
+      offset += 2 + size
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function formatExifDate(s: string | null): string {
+  if (!s) return ''
+  // EXIF: YYYY:MM:DD HH:MM:SS
+  const m = s.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/)
+  if (!m) return s
+  const [, y, mo, d, h, mi] = m
+  return `${y}-${mo}-${d} ${h}:${mi}`
+}
+
 export default function ImageUpload() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -17,6 +109,7 @@ export default function ImageUpload() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
   const [imageBox, setImageBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
+  const [meta, setMeta] = useState<{ dateTaken: string | null; naturalWidth?: number; naturalHeight?: number }>({ dateTaken: null })
 
   const validateFile = (file: File): boolean => {
     // Check file type
@@ -45,6 +138,13 @@ export default function ImageUpload() {
 
     const preview = URL.createObjectURL(file)
     setUploadedFile({ file, preview })
+    // Reset meta and try to read EXIF Date Taken (JPEG only)
+    setMeta({ dateTaken: null })
+    readExifDateTaken(file).then((dt) => {
+      setMeta((m) => ({ ...m, dateTaken: dt }))
+    }).catch(() => {
+      setMeta((m) => ({ ...m, dateTaken: null }))
+    })
   }, [])
 
   useEffect(() => {
@@ -205,6 +305,9 @@ export default function ImageUpload() {
                   const i = imgRef.current.getBoundingClientRect()
                   setImageBox({ left: i.left - c.left, top: i.top - c.top, width: i.width, height: i.height })
                 }
+                if (imgRef.current) {
+                  setMeta((m) => ({ ...m, naturalWidth: imgRef.current!.naturalWidth, naturalHeight: imgRef.current!.naturalHeight }))
+                }
               }}
             />
             {imgRef.current && imageBox && (
@@ -228,6 +331,8 @@ export default function ImageUpload() {
           }}>
             <strong>File Info:</strong><br />
             Name: {uploadedFile.file.name}<br />
+            Date taken: {formatExifDate(meta.dateTaken) || '—'}<br />
+            Dimensions: {meta.naturalWidth && meta.naturalHeight ? `${meta.naturalWidth} x ${meta.naturalHeight} px` : '—'}<br />
             Size: {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB<br />
             Type: {uploadedFile.file.type}
           </div>
@@ -273,10 +378,19 @@ export default function ImageUpload() {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
 
-    const dataUrl = canvas.toDataURL('image/png')
+    const allowedMimes = ['image/jpeg','image/png','image/webp'] as const
+    const srcMime = allowedMimes.includes(uploadedFile.file.type as any) ? uploadedFile.file.type : 'image/png'
+    const quality = (srcMime === 'image/jpeg' || srcMime === 'image/webp') ? 0.92 : undefined
+    const dataUrl = quality !== undefined ? canvas.toDataURL(srcMime, quality) : canvas.toDataURL(srcMime)
+
+    const originalName = uploadedFile.file.name
+    const dotIndex = originalName.lastIndexOf('.')
+    const baseName = dotIndex > 0 ? originalName.slice(0, dotIndex) : originalName
+    const ext = srcMime === 'image/jpeg' ? 'jpg' : (srcMime === 'image/webp' ? 'webp' : 'png')
+
     const a = document.createElement('a')
     a.href = dataUrl
-    a.download = 'crop.png'
+    a.download = `${baseName}_${sw}x${sh}.${ext}`
     a.click()
   }
 }
