@@ -1,17 +1,17 @@
-# BESKÄR OCH SKALA BILDER
+# CROP AND RESIZE IMAGES
 
-Denna app riktar sig till personer som vill kunna beskära en bild för flera olika användningsområden som kräver olika storlekar (t ex 1920x1080, 1280x720, 260x480) och format (t ex jpg, png, webp).
+This app is designed for people who want to crop an image for multiple different use cases that require different sizes (e.g., 1920x1080, 1280x720, 260x480) and formats (e.g., jpg, png, webp).
 
-## Flöde
+## Flow
 
-1. Användaren laddar upp en bild. Det ska gå med både drag-and-drop och med en filväljare.
-2. Användaren väljer en målstorlek från en lista med förvalda storlekar.
-3. En rektangel som har samma aspect ratio som målstorleken visas på bilden som visar var bilden ska beskäras.
-4. Användaren kan flytta rektangeln och ändra storleken på den.
-5. Användaren kan klicka på "Beskär" för att beskära bilden.
-6. Målformat kan väljas från en lista med förvalda format.
-6. Användaren kan ladda ner den beskurna bilden i det valda formatet.
+1. The user uploads an image. This should work with both drag-and-drop and a file picker.
+2. The user selects a target size from a list of predefined sizes.
+3. A rectangle with the same aspect ratio as the target size is displayed on the image showing where the image will be cropped.
+4. The user can move the rectangle and change its size.
+5. The user can click "Crop" to crop the image.
+6. Target format can be selected from a list of predefined formats.
+7. The user can download the cropped image in the selected format.
 
-## Teknik
+## Tech Stack
 
-Se TECH.md för teknikval och flöde.
+See TECH.md for technology choices and workflow.

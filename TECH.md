@@ -1,35 +1,33 @@
-Här är ett förslag på en `TECHSTACK.md` som beskriver teknikvalet och processen för att utveckla och distribuera ett Cloudflare Pages + Functions-projekt.
-
 # Tech Stack & Deployment Guide
 
-Detta dokument beskriver den tekniska stacken och tillvägagångssättet för att utveckla, testa och distribuera ett projekt som använder **Cloudflare Pages** tillsammans med **Pages Functions** för att bygga en fullstack-applikation (frontend + backend i samma repo).
+This document describes the technical stack and approach for developing, testing, and deploying a project that uses **Cloudflare Pages** together with **Pages Functions** to build a fullstack application (frontend + backend in the same repo).
 
 ---
 
-## 1. Översikt
+## 1. Overview
 
-### **Mål**
-- Bygga moderna webbappar med **React (Vite)** för frontend.
-- Implementera backend-endpoints direkt i samma projekt via **Cloudflare Pages Functions**.
-- Köra allt **serverless** på Cloudflares globala edge-nätverk för låg latens och enkel drift.
-- Minimera behovet av serverhantering, CORS och komplexa deployflöden.
+### **Goals**
+- Build modern web apps with **React (Vite)** for frontend.
+- Implement backend endpoints directly in the same project via **Cloudflare Pages Functions**.
+- Run everything **serverless** on Cloudflare's global edge network for low latency and simple operations.
+- Minimize the need for server management, CORS, and complex deployment flows.
 
-### **Teknikval**
-| Komponent          | Vald teknik                  | Motiv |
-|--------------------|------------------------------|-------|
-| **Frontend**       | React + Vite                  | Snabb utveckling, moderna features. |
-| **Backend/API**    | Cloudflare Pages Functions (TypeScript) | Edge-nära serverless, samma origin som frontend. |
-| **Routing/Framework** | Hono (för komplexare API) | Lättviktigt, känns likt FastAPI/Express. |
-| **Databas**        | Cloudflare D1                 | Serverless SQL (SQLite), enkel att starta med. |
-| **Cache/Config**   | Cloudflare KV                 | Snabba key-value reads globalt. |
-| **CI/CD**          | Cloudflare Git Integration eller Wrangler + GitHub Actions | Enkel och automatiserad deploy. |
-| **Paketmanager**   | pnpm                          | Effektiv hantering av monorepos. |
+### **Technology Choices**
+| Component          | Chosen Technology            | Reason |
+|--------------------|------------------------------|--------|
+| **Frontend**       | React + Vite                 | Fast development, modern features. |
+| **Backend/API**    | Cloudflare Pages Functions (TypeScript) | Edge-close serverless, same origin as frontend. |
+| **Routing/Framework** | Hono (for complex APIs)   | Lightweight, feels like FastAPI/Express. |
+| **Database**       | Cloudflare D1                | Serverless SQL (SQLite), easy to get started. |
+| **Cache/Config**   | Cloudflare KV                | Fast key-value reads globally. |
+| **CI/CD**          | Cloudflare Git Integration or Wrangler + GitHub Actions | Simple and automated deployment. |
+| **Package Manager** | pnpm                        | Efficient monorepo management. |
 
 ---
 
-## 2. Struktur
+## 2. Structure
 
-Projektet är ett **monorepo per app**, med frontend och API i samma katalog.
+The project is a **monorepo per app**, with frontend and API in the same directory.
 
 
 my-app/
@@ -47,25 +45,25 @@ my-app/
 
 ---
 
-## 3. Lokalt utvecklingsflöde
+## 3. Local Development Flow
 
-### **Installera**
+### **Install**
 ```bash
 pnpm install
-````
+```
 
-### **Starta dev-server**
+### **Start dev server**
 
-Två processer:
+Two processes:
 
-1. **Vite (frontend med hot reload):**
+1. **Vite (frontend with hot reload):**
 
    ```bash
    cd apps/web
    pnpm dev
    ```
 
-   Startar på `http://localhost:5173`
+   Starts on `http://localhost:5173`
 
 2. **Cloudflare Pages Functions (backend):**
 
@@ -74,49 +72,49 @@ Två processer:
    npx wrangler pages dev --proxy 5173
    ```
 
-   Startar på `http://127.0.0.1:8788`
+   Starts on `http://127.0.0.1:8788`
 
-**Resultat:**
+**Result:**
 
 * Frontend: `http://127.0.0.1:8788`
 * API: `http://127.0.0.1:8788/api/healthz`
 
 ---
 
-## 4. Deploy till Cloudflare
+## 4. Deploy to Cloudflare
 
-### **Alternativ A: Git-integration (enklast)**
+### **Option A: Git integration (easiest)**
 
-1. Gå till **Cloudflare Dashboard → Pages → Create Project**.
-2. Välj ditt GitHub-repo.
-3. Inställningar:
+1. Go to **Cloudflare Dashboard → Pages → Create Project**.
+2. Select your GitHub repo.
+3. Settings:
 
    * **Root directory:** `apps/web`
    * **Build command:** `pnpm i && pnpm build`
    * **Output directory:** `dist`
-4. Deploy startar automatiskt.
+4. Deploy starts automatically.
 
-**Bindings & miljövariabler:**
+**Bindings & environment variables:**
 
-* Gå till **Settings → Functions → Bindings** och lägg till t.ex. `DB` för D1 eller `CACHE` för KV.
-* Miljövariabler (t.ex. API-nycklar) hanteras under **Settings → Environment Variables**.
+* Go to **Settings → Functions → Bindings** and add e.g. `DB` for D1 or `CACHE` for KV.
+* Environment variables (e.g. API keys) are managed under **Settings → Environment Variables**.
 
 ---
 
-### **Alternativ B: CLI-deploy**
+### **Option B: CLI deploy**
 
-1. Logga in med Wrangler:
+1. Login with Wrangler:
 
    ```bash
    npx wrangler login
    ```
-2. Bygg frontend:
+2. Build frontend:
 
    ```bash
    cd apps/web
    pnpm build
    ```
-3. Deploya manuellt:
+3. Deploy manually:
 
    ```bash
    npx wrangler pages deploy ./dist --project-name=my-app-web
@@ -124,7 +122,7 @@ Två processer:
 
 ---
 
-## 5. API med Pages Functions
+## 5. API with Pages Functions
 
 ### Minimal endpoint
 
@@ -135,7 +133,7 @@ export const onRequestGet: PagesFunction = async () => {
 }
 ```
 
-### Med Hono
+### With Hono
 
 ```ts
 // functions/api/index.ts
@@ -150,15 +148,15 @@ export const onRequest: PagesFunction = (context) => app.fetch(context.request)
 
 ---
 
-## 6. Databas & lagring (Cloudflare bindings)
+## 6. Database & Storage (Cloudflare bindings)
 
-| Tjänst | Binding | Användning          |
-| ------ | ------- | ------------------- |
-| **D1** | `DB`    | Relationsdata (SQL) |
-| **KV** | `CACHE` | Key-value lagring   |
-| **R2** | `FILES` | Filuppladdningar    |
+| Service | Binding | Usage               |
+| ------- | ------- | ------------------- |
+| **D1**  | `DB`    | Relational data (SQL) |
+| **KV**  | `CACHE` | Key-value storage   |
+| **R2**  | `FILES` | File uploads        |
 
-Exempel:
+Example:
 
 ```ts
 export const onRequestGet: PagesFunction<{ Bindings: { DB: D1Database } }> = async (ctx) => {
@@ -169,21 +167,21 @@ export const onRequestGet: PagesFunction<{ Bindings: { DB: D1Database } }> = asy
 
 ---
 
-## 7. Fördelar med denna lösning
+## 7. Benefits of this solution
 
-* **En deploy för hela appen**: Frontend och backend deployas tillsammans.
-* **Ingen CORS**: API ligger under samma origin som frontend.
-* **Skalar globalt automatiskt**: Cloudflare edge tar hand om distributionen.
-* **Låga kostnader**: Generös gratisnivå, betala bara när trafiken växer.
-* **Enkel arkitektur**: Mindre rörliga delar än separata Workers/servrar.
+* **One deploy for the entire app**: Frontend and backend are deployed together.
+* **No CORS**: API is under the same origin as frontend.
+* **Scales globally automatically**: Cloudflare edge handles distribution.
+* **Low costs**: Generous free tier, pay only when traffic grows.
+* **Simple architecture**: Fewer moving parts than separate Workers/servers.
 
 ---
 
-## 8. Nästa steg
+## 8. Next steps
 
-* Lägg till testmiljöer via Pages Preview Deployments.
-* Integrera **CI/CD** via GitHub Actions om du behöver mer kontroll.
-* Bygg ut backend med D1, KV eller Durable Objects när komplexiteten växer.
+* Add test environments via Pages Preview Deployments.
+* Integrate **CI/CD** via GitHub Actions if you need more control.
+* Expand backend with D1, KV or Durable Objects as complexity grows.
 
 ---
 
