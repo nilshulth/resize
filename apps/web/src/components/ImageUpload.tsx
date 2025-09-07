@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import AspectRatioSelector, { AspectRatioOption } from './AspectRatioSelector'
+import CropOverlay from './CropOverlay'
 
 interface UploadedFile {
   file: File
@@ -9,6 +11,12 @@ export default function ImageUpload() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [aspect, setAspect] = useState<AspectRatioOption['value']>('original')
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
+  const [imageBox, setImageBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
 
   const validateFile = (file: File): boolean => {
     // Check file type
@@ -37,6 +45,23 @@ export default function ImageUpload() {
 
     const preview = URL.createObjectURL(file)
     setUploadedFile({ file, preview })
+  }, [])
+
+  useEffect(() => {
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const cr = entry.contentRect
+        setContainerSize({ width: cr.width, height: cr.height })
+        // also recompute image box on container resize
+        if (containerRef.current && imgRef.current) {
+          const c = containerRef.current.getBoundingClientRect()
+          const i = imgRef.current.getBoundingClientRect()
+          setImageBox({ left: i.left - c.left, top: i.top - c.top, width: i.width, height: i.height })
+        }
+      }
+    })
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => ro.disconnect()
   }, [])
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -140,18 +165,59 @@ export default function ImageUpload() {
               Remove
             </button>
           </div>
+
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+            <AspectRatioSelector
+              value={aspect}
+              onChange={setAspect}
+              originalWidth={imgRef.current?.naturalWidth}
+              originalHeight={imgRef.current?.naturalHeight}
+            />
+            <button
+              onClick={() => doCrop()}
+              style={{
+                background: '#0070f3', color: 'white', border: 'none', borderRadius: 4,
+                padding: '8px 14px', cursor: 'pointer'
+              }}
+            >Crop</button>
+          </div>
           
-          <img
-            src={uploadedFile.preview}
-            alt="Uploaded preview"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '400px',
-              borderRadius: '4px',
-              display: 'block',
-              margin: '0 auto'
-            }}
-          />
+          <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 420, overflow: 'hidden', borderRadius: 4 }}>
+            <img
+              ref={imgRef}
+              src={uploadedFile.preview}
+              alt="Uploaded preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                borderRadius: '4px',
+                display: 'block',
+                margin: '0 auto'
+              }}
+              onLoad={() => {
+                // trigger container measurement
+                if (containerRef.current) {
+                  const r = containerRef.current.getBoundingClientRect()
+                  setContainerSize({ width: r.width, height: r.height })
+                }
+                if (containerRef.current && imgRef.current) {
+                  const c = containerRef.current.getBoundingClientRect()
+                  const i = imgRef.current.getBoundingClientRect()
+                  setImageBox({ left: i.left - c.left, top: i.top - c.top, width: i.width, height: i.height })
+                }
+              }}
+            />
+            {imgRef.current && imageBox && (
+              <CropOverlay
+                image={imgRef.current}
+                containerWidth={containerSize.width}
+                containerHeight={containerSize.height}
+                imageBox={imageBox}
+                aspect={aspect}
+                onChange={setCropRect}
+              />
+            )}
+          </div>
           
           <div style={{
             marginTop: '15px',
@@ -183,5 +249,33 @@ export default function ImageUpload() {
       )}
     </div>
   )
+
+  function doCrop() {
+    if (!uploadedFile || !imgRef.current || !cropRect || !containerRef.current) return
+    const img = imgRef.current
+    // translate cropRect from displayed coordinates to natural image pixels
+    const bounds = containerRef.current.getBoundingClientRect()
+    const displayedWidth = img.width
+    const displayedHeight = img.height
+    const scaleX = img.naturalWidth / displayedWidth
+    const scaleY = img.naturalHeight / displayedHeight
+
+    const sx = Math.max(0, Math.round(cropRect.x * scaleX))
+    const sy = Math.max(0, Math.round(cropRect.y * scaleY))
+    const sw = Math.min(img.naturalWidth - sx, Math.round(cropRect.width * scaleX))
+    const sh = Math.min(img.naturalHeight - sy, Math.round(cropRect.height * scaleY))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = sw
+    canvas.height = sh
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+
+    const dataUrl = canvas.toDataURL('image/png')
+    const a = document.createElement('a')
+    a.href = dataUrl
+    a.download = 'crop.png'
+    a.click()
+  }
 }
 
