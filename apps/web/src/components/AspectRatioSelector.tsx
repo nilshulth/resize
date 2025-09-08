@@ -14,6 +14,8 @@ export const TARGETS: TargetOption[] = [
   { id: 'instagram-kvadratisk-1080x1080', name: 'Instagram, kvadratisk', width: 1080, height: 1080 },
   { id: 'instagram-staende-4-5-1080x1350', name: 'Instagram, stående (4:5)', width: 1080, height: 1350 },
   { id: 'instagram-story-9-16-1080x1920', name: 'Instagram Story (9:16)', width: 1080, height: 1920 },
+  { id: 'nyhetsbrev-stor-600x300', name: 'Nyhetsbrev, stor', width: 600, height: 300 },
+  { id: 'nyhetsbrev-liten-270x170', name: 'Nyhetsbrev, liten', width: 270, height: 170 },
 ]
 
 type AspectRatioSelectorProps = {

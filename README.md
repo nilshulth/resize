@@ -11,6 +11,8 @@ This app is designed for people who want to crop an image for multiple different
 - Instagram, kvadratisk: 1080x1080
 - Instagram, stående (4:5): 1080x1350
 - Instagram Story (9:16): 1080x1920
+- Nyhetsbrev, stor: 600x300
+- Nyhetsbrev, liten: 270x170
 
 ## Flow
 
