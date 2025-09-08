@@ -373,11 +373,18 @@ export default function ImageUpload() {
     const sw = Math.min(img.naturalWidth - sx, Math.round(cropRect.width * scaleX))
     const sh = Math.min(img.naturalHeight - sy, Math.round(cropRect.height * scaleY))
 
+    const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
+    const outW = target.width
+    const outH = target.height
+
     const canvas = document.createElement('canvas')
-    canvas.width = sw
-    canvas.height = sh
+    canvas.width = outW
+    canvas.height = outH
     const ctx = canvas.getContext('2d')!
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+    ctx.imageSmoothingEnabled = true
+    ;(ctx as any).imageSmoothingQuality = 'high'
+    // Draw the selected crop area scaled to the target output size
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH)
 
     const allowedMimes = ['image/jpeg','image/png','image/webp'] as const
     const srcMime = allowedMimes.includes(uploadedFile.file.type as any) ? uploadedFile.file.type : 'image/png'
@@ -391,7 +398,6 @@ export default function ImageUpload() {
 
     const a = document.createElement('a')
     a.href = dataUrl
-    const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
     const targetName = target.name
     a.download = `${baseName}-${targetName}-${target.width}x${target.height}.${ext}`
     a.click()
