@@ -104,6 +104,11 @@ export default function ImageUpload() {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string>(TARGETS[0]?.id ?? '')
+
+  const handleTargetChange = (newTargetId: string) => {
+    setSelectedTargetId(newTargetId)
+    // CropOverlay will automatically maximize when aspect changes
+  }
   const imgRef = useRef<HTMLImageElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -269,7 +274,7 @@ export default function ImageUpload() {
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
             <AspectRatioSelector
               value={selectedTargetId}
-              onChange={setSelectedTargetId}
+              onChange={handleTargetChange}
             />
             {cropRect && imageBox && (() => {
               const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
@@ -376,6 +381,7 @@ export default function ImageUpload() {
                   const c = containerRef.current.getBoundingClientRect()
                   const i = imgRef.current.getBoundingClientRect()
                   setImageBox({ left: i.left - c.left, top: i.top - c.top, width: i.width, height: i.height })
+                  // CropOverlay will set initial crop when imageBox updates
                 }
                 if (imgRef.current) {
                   setMeta((m) => ({ ...m, naturalWidth: imgRef.current!.naturalWidth, naturalHeight: imgRef.current!.naturalHeight }))

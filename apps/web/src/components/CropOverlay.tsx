@@ -29,29 +29,34 @@ export default function CropOverlay({ containerWidth, containerHeight, imageBox,
 
   useEffect(() => { onChange?.(rect) }, [rect, onChange])
 
+
   useEffect(() => {
-    // Recenter on aspect change
+    // Maximize crop area when aspect ratio changes
     const iw = imageBox.width
     const ih = imageBox.height
-    const ratio = iw / ih
-    let w = rect.width
-    let h = rect.height
+    
     if (aspect !== 'original') {
-      // fit current rect to aspect while keeping center
-      const cx = rect.x + rect.width / 2
-      const cy = rect.y + rect.height / 2
-      if (w / h > aspect) w = h * aspect
-      else h = w / aspect
-      setRect({ x: cx - w / 2, y: cy - h / 2, width: w, height: h })
+      // Calculate max crop dimensions that fit within image bounds
+      let maxW = iw
+      let maxH = ih
+      
+      // Fit aspect ratio within image bounds
+      if (maxW / maxH > aspect) {
+        // Image is wider than target aspect, constrain by height
+        maxW = maxH * aspect
+      } else {
+        // Image is taller than target aspect, constrain by width
+        maxH = maxW / aspect
+      }
+      
+      // Center the crop
+      const x = imageBox.left + (iw - maxW) / 2
+      const y = imageBox.top + (ih - maxH) / 2
+      
+      setRect({ x, y, width: maxW, height: maxH })
     } else {
-      // keep within image bounds
-      const maxW = iw
-      const maxH = maxW / ratio
-      const cx = rect.x + rect.width / 2
-      const cy = rect.y + rect.height / 2
-      w = Math.min(rect.width, maxW)
-      h = Math.min(rect.height, maxH)
-      setRect({ x: Math.max(imageBox.left, cx - w / 2), y: Math.max(imageBox.top, cy - h / 2), width: w, height: h })
+      // For original aspect, use full image
+      setRect({ x: imageBox.left, y: imageBox.top, width: iw, height: ih })
     }
   }, [aspect, imageBox])
 
