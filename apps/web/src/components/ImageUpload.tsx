@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import AspectRatioSelector, { AspectRatioOption } from './AspectRatioSelector'
+import AspectRatioSelector, { TARGETS } from './AspectRatioSelector'
 import CropOverlay from './CropOverlay'
 
 interface UploadedFile {
@@ -103,7 +103,7 @@ export default function ImageUpload() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [aspect, setAspect] = useState<AspectRatioOption['value']>('original')
+  const [selectedTargetId, setSelectedTargetId] = useState<string>(TARGETS[0]?.id ?? '')
   const imgRef = useRef<HTMLImageElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -268,10 +268,8 @@ export default function ImageUpload() {
 
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
             <AspectRatioSelector
-              value={aspect}
-              onChange={setAspect}
-              originalWidth={imgRef.current?.naturalWidth}
-              originalHeight={imgRef.current?.naturalHeight}
+              value={selectedTargetId}
+              onChange={setSelectedTargetId}
             />
             <button
               onClick={() => doCrop()}
@@ -315,7 +313,10 @@ export default function ImageUpload() {
                 containerWidth={containerSize.width}
                 containerHeight={containerSize.height}
                 imageBox={imageBox}
-                aspect={aspect}
+                aspect={(function() {
+                  const t = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
+                  return t.width / t.height
+                })()}
                 onChange={setCropRect}
               />
             )}
@@ -390,7 +391,9 @@ export default function ImageUpload() {
 
     const a = document.createElement('a')
     a.href = dataUrl
-    a.download = `${baseName}_${sw}x${sh}.${ext}`
+    const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
+    const targetName = target.name
+    a.download = `${baseName}-${targetName}-${target.width}x${target.height}.${ext}`
     a.click()
   }
 }

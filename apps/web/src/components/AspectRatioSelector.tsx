@@ -1,44 +1,33 @@
-import { useMemo } from 'react'
-
-export type AspectRatioOption = {
+export type TargetOption = {
   id: string
-  label: string
-  value: number | 'original'
+  name: string
+  width: number
+  height: number
 }
+
+export const TARGETS: TargetOption[] = [
+  { id: 'toppbild-1932x828', name: 'Toppbild', width: 1932, height: 828 },
+  { id: 'brodtextbild-1200x800', name: 'Brödtextbild', width: 1200, height: 800 },
+  { id: 'linkedin-liggande-1200x628', name: 'LinkedIn, liggande', width: 1200, height: 628 },
+  { id: 'linkedin-kvadratisk-1200x1200', name: 'LinkedIn, kvadratisk', width: 1200, height: 1200 },
+  { id: 'linkedin-staende-4-5-1200x628', name: 'LinkedIn, stående (4:5)', width: 1200, height: 628 },
+  { id: 'instagram-kvadratisk-1080x1080', name: 'Instagram, kvadratisk', width: 1080, height: 1080 },
+  { id: 'instagram-staende-4-5-1080x1350', name: 'Instagram, stående (4:5)', width: 1080, height: 1350 },
+  { id: 'instagram-story-9-16-1080x1920', name: 'Instagram Story (9:16)', width: 1080, height: 1920 },
+]
 
 type AspectRatioSelectorProps = {
-  originalWidth?: number
-  originalHeight?: number
-  value: AspectRatioOption['value']
-  onChange: (value: AspectRatioOption['value']) => void
+  value: string
+  onChange: (id: string) => void
 }
 
-export function AspectRatioSelector({ originalWidth, originalHeight, value, onChange }: AspectRatioSelectorProps) {
-  const options = useMemo<AspectRatioOption[]>(() => [
-    { id: 'original', label: 'Original', value: 'original' },
-    { id: '1_1', label: '1:1', value: 1 },
-    { id: '16_9', label: '16:9', value: 16 / 9 },
-    { id: '4_3', label: '4:3', value: 4 / 3 },
-    { id: '3_2', label: '3:2', value: 3 / 2 },
-  ], [])
-
-  const effectiveLabel = (opt: AspectRatioOption) => {
-    if (opt.value !== 'original') return opt.label
-    if (!originalWidth || !originalHeight) return opt.label
-    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b)
-    const g = gcd(originalWidth, originalHeight)
-    return `Original (${originalWidth / g}:${originalHeight / g})`
-  }
-
+export function AspectRatioSelector({ value, onChange }: AspectRatioSelectorProps) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      <label style={{ color: '#444', fontSize: 14 }}>Aspect ratio</label>
+      <label style={{ color: '#444', fontSize: 14 }}>Target</label>
       <select
-        value={String(value)}
-        onChange={(e) => {
-          const v = e.target.value
-          onChange(v === 'original' ? 'original' : Number(v))
-        }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         style={{
           padding: '6px 10px',
           borderRadius: 4,
@@ -46,9 +35,9 @@ export function AspectRatioSelector({ originalWidth, originalHeight, value, onCh
           background: 'white',
         }}
       >
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.value === 'original' ? 'original' : String(opt.value)}>
-            {effectiveLabel(opt)}
+        {TARGETS.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name} ({t.width}x{t.height})
           </option>
         ))}
       </select>
