@@ -34,6 +34,17 @@ function App() {
       }}>
         <ImageUpload />
       </main>
+      
+      <footer style={{
+        textAlign: 'center',
+        marginTop: '60px',
+        paddingTop: '20px',
+        borderTop: '1px solid #e5e5e5',
+        color: '#888',
+        fontSize: '14px'
+      }}>
+        © {new Date().getFullYear()} Prodify Group AB. All rights reserved.
+      </footer>
     </div>
   )
 }

@@ -104,6 +104,7 @@ export default function ImageUpload() {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string>(TARGETS[0]?.id ?? '')
+  const [selectedFormat, setSelectedFormat] = useState<'jpg' | 'png' | 'webp'>('jpg')
 
   const handleTargetChange = (newTargetId: string) => {
     setSelectedTargetId(newTargetId)
@@ -276,80 +277,23 @@ export default function ImageUpload() {
               value={selectedTargetId}
               onChange={handleTargetChange}
             />
-            {cropRect && imageBox && (() => {
-              const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
-              const img = imgRef.current
-              if (!img) return null
-              
-              // Calculate crop area in natural image pixels
-              const displayedWidth = img.width
-              const displayedHeight = img.height
-              const scaleX = img.naturalWidth / displayedWidth
-              const scaleY = img.naturalHeight / displayedHeight
-              const naturalCropWidth = cropRect.width * scaleX
-              const naturalCropHeight = cropRect.height * scaleY
-              
-              // Quality factor: how much we need to scale the crop to reach target size
-              const scaleFactorX = target.width / naturalCropWidth
-              const scaleFactorY = target.height / naturalCropHeight
-              const maxScaleFactor = Math.max(scaleFactorX, scaleFactorY)
-              
-              let qualityText = ''
-              let qualityColor = ''
-              let thermometerFill = 0
-              
-              if (maxScaleFactor <= 0.5) {
-                qualityText = 'Excellent (downsizing)'
-                qualityColor = '#22c55e'
-                thermometerFill = 100
-              } else if (maxScaleFactor <= 1.0) {
-                qualityText = 'Very good'
-                qualityColor = '#16a34a'
-                thermometerFill = 85
-              } else if (maxScaleFactor <= 1.5) {
-                qualityText = 'Good'
-                qualityColor = '#84cc16'
-                thermometerFill = 70
-              } else if (maxScaleFactor <= 2.0) {
-                qualityText = 'Acceptable'
-                qualityColor = '#eab308'
-                thermometerFill = 50
-              } else if (maxScaleFactor <= 3.0) {
-                qualityText = 'Poor quality'
-                qualityColor = '#f97316'
-                thermometerFill = 30
-              } else {
-                qualityText = 'Very poor quality'
-                qualityColor = '#ef4444'
-                thermometerFill = 15
-              }
-              
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, color: '#666' }}>Kvalitet:</span>
-                  <div style={{ 
-                    width: 80, height: 16, 
-                    background: '#e5e7eb', 
-                    borderRadius: 8, 
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}>
-                    <div style={{ 
-                      width: `${thermometerFill}%`, 
-                      height: '100%', 
-                      background: qualityColor,
-                      transition: 'all 0.3s ease'
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 14, color: qualityColor, fontWeight: 500 }}>
-                    {qualityText}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#999' }}>
-                    ({maxScaleFactor > 1 ? `${maxScaleFactor.toFixed(1)}x upscale` : `${(1/maxScaleFactor).toFixed(1)}x downscale`})
-                  </span>
-                </div>
-              )
-            })()}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <label style={{ color: '#444', fontSize: 14 }}>Format</label>
+              <select
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value as 'jpg' | 'png' | 'webp')}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 4,
+                  border: '1px solid #ccc',
+                  background: 'white',
+                }}
+              >
+                <option value="jpg">JPG</option>
+                <option value="png">PNG</option>
+                <option value="webp">WebP</option>
+              </select>
+            </div>
             <button
               onClick={() => doCrop()}
               style={{
@@ -410,12 +354,92 @@ export default function ImageUpload() {
             fontSize: '14px',
             color: '#666'
           }}>
-            <strong>File Info:</strong><br />
-            Name: {uploadedFile.file.name}<br />
-            Date taken: {formatExifDate(meta.dateTaken) || '—'}<br />
-            Dimensions: {meta.naturalWidth && meta.naturalHeight ? `${meta.naturalWidth} x ${meta.naturalHeight} px` : '—'}<br />
-            Size: {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB<br />
-            Type: {uploadedFile.file.type}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20 }}>
+              <div style={{ flex: 1 }}>
+                <strong>File Info:</strong><br />
+                Name: {uploadedFile.file.name}<br />
+                Date taken: {formatExifDate(meta.dateTaken) || '—'}<br />
+                Dimensions: {meta.naturalWidth && meta.naturalHeight ? `${meta.naturalWidth} x ${meta.naturalHeight} px` : '—'}<br />
+                Size: {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB<br />
+                Type: {uploadedFile.file.type}
+              </div>
+              {cropRect && imageBox && (() => {
+                const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
+                const img = imgRef.current
+                if (!img) return null
+                
+                // Calculate crop area in natural image pixels
+                const displayedWidth = img.width
+                const displayedHeight = img.height
+                const scaleX = img.naturalWidth / displayedWidth
+                const scaleY = img.naturalHeight / displayedHeight
+                const naturalCropWidth = cropRect.width * scaleX
+                const naturalCropHeight = cropRect.height * scaleY
+                
+                // Quality factor: how much we need to scale the crop to reach target size
+                const scaleFactorX = target.width / naturalCropWidth
+                const scaleFactorY = target.height / naturalCropHeight
+                const maxScaleFactor = Math.max(scaleFactorX, scaleFactorY)
+                
+                let qualityText = ''
+                let qualityColor = ''
+                let thermometerFill = 0
+                
+                if (maxScaleFactor <= 0.5) {
+                  qualityText = 'Excellent (downsizing)'
+                  qualityColor = '#22c55e'
+                  thermometerFill = 100
+                } else if (maxScaleFactor <= 1.0) {
+                  qualityText = 'Very good'
+                  qualityColor = '#16a34a'
+                  thermometerFill = 85
+                } else if (maxScaleFactor <= 1.5) {
+                  qualityText = 'Good'
+                  qualityColor = '#84cc16'
+                  thermometerFill = 70
+                } else if (maxScaleFactor <= 2.0) {
+                  qualityText = 'Acceptable'
+                  qualityColor = '#eab308'
+                  thermometerFill = 50
+                } else if (maxScaleFactor <= 3.0) {
+                  qualityText = 'Poor quality'
+                  qualityColor = '#f97316'
+                  thermometerFill = 30
+                } else {
+                  qualityText = 'Very poor quality'
+                  qualityColor = '#ef4444'
+                  thermometerFill = 15
+                }
+                
+                return (
+                  <div style={{ flex: 1 }}>
+                    <strong>Crop Quality:</strong><br />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                      <div style={{ 
+                        width: 100, height: 16, 
+                        background: '#e5e7eb', 
+                        borderRadius: 8, 
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}>
+                        <div style={{ 
+                          width: `${thermometerFill}%`, 
+                          height: '100%', 
+                          background: qualityColor,
+                          transition: 'all 0.3s ease'
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 13, color: qualityColor, fontWeight: 500 }}>
+                        {qualityText}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                      {maxScaleFactor > 1 ? `${maxScaleFactor.toFixed(1)}x upscale` : `${(1/maxScaleFactor).toFixed(1)}x downscale`}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
         </div>
       )}
@@ -466,20 +490,24 @@ export default function ImageUpload() {
     // Draw the selected crop area scaled to the target output size
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH)
 
-    const allowedMimes = ['image/jpeg','image/png','image/webp'] as const
-    const srcMime = allowedMimes.includes(uploadedFile.file.type as any) ? uploadedFile.file.type : 'image/png'
-    const quality = (srcMime === 'image/jpeg' || srcMime === 'image/webp') ? 0.92 : undefined
-    const dataUrl = quality !== undefined ? canvas.toDataURL(srcMime, quality) : canvas.toDataURL(srcMime)
+    // Use selected format instead of source format
+    const formatToMime = {
+      'jpg': 'image/jpeg',
+      'png': 'image/png', 
+      'webp': 'image/webp'
+    }
+    const outputMime = formatToMime[selectedFormat]
+    const quality = (selectedFormat === 'jpg' || selectedFormat === 'webp') ? 0.92 : undefined
+    const dataUrl = quality !== undefined ? canvas.toDataURL(outputMime, quality) : canvas.toDataURL(outputMime)
 
     const originalName = uploadedFile.file.name
     const dotIndex = originalName.lastIndexOf('.')
     const baseName = dotIndex > 0 ? originalName.slice(0, dotIndex) : originalName
-    const ext = srcMime === 'image/jpeg' ? 'jpg' : (srcMime === 'image/webp' ? 'webp' : 'png')
 
     const a = document.createElement('a')
     a.href = dataUrl
     const targetName = target.name
-    a.download = `${baseName}-${targetName}-${target.width}x${target.height}.${ext}`
+    a.download = `${baseName}-${targetName}-${target.width}x${target.height}.${selectedFormat}`
     a.click()
   }
 }
