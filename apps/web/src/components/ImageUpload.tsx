@@ -271,6 +271,80 @@ export default function ImageUpload() {
               value={selectedTargetId}
               onChange={setSelectedTargetId}
             />
+            {cropRect && imageBox && (() => {
+              const target = TARGETS.find(t => t.id === selectedTargetId) ?? TARGETS[0]
+              const img = imgRef.current
+              if (!img) return null
+              
+              // Calculate crop area in natural image pixels
+              const displayedWidth = img.width
+              const displayedHeight = img.height
+              const scaleX = img.naturalWidth / displayedWidth
+              const scaleY = img.naturalHeight / displayedHeight
+              const naturalCropWidth = cropRect.width * scaleX
+              const naturalCropHeight = cropRect.height * scaleY
+              
+              // Quality factor: how much we need to scale the crop to reach target size
+              const scaleFactorX = target.width / naturalCropWidth
+              const scaleFactorY = target.height / naturalCropHeight
+              const maxScaleFactor = Math.max(scaleFactorX, scaleFactorY)
+              
+              let qualityText = ''
+              let qualityColor = ''
+              let thermometerFill = 0
+              
+              if (maxScaleFactor <= 0.5) {
+                qualityText = 'Excellent (downsizing)'
+                qualityColor = '#22c55e'
+                thermometerFill = 100
+              } else if (maxScaleFactor <= 1.0) {
+                qualityText = 'Very good'
+                qualityColor = '#16a34a'
+                thermometerFill = 85
+              } else if (maxScaleFactor <= 1.5) {
+                qualityText = 'Good'
+                qualityColor = '#84cc16'
+                thermometerFill = 70
+              } else if (maxScaleFactor <= 2.0) {
+                qualityText = 'Acceptable'
+                qualityColor = '#eab308'
+                thermometerFill = 50
+              } else if (maxScaleFactor <= 3.0) {
+                qualityText = 'Poor quality'
+                qualityColor = '#f97316'
+                thermometerFill = 30
+              } else {
+                qualityText = 'Very poor quality'
+                qualityColor = '#ef4444'
+                thermometerFill = 15
+              }
+              
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, color: '#666' }}>Kvalitet:</span>
+                  <div style={{ 
+                    width: 80, height: 16, 
+                    background: '#e5e7eb', 
+                    borderRadius: 8, 
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}>
+                    <div style={{ 
+                      width: `${thermometerFill}%`, 
+                      height: '100%', 
+                      background: qualityColor,
+                      transition: 'all 0.3s ease'
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 14, color: qualityColor, fontWeight: 500 }}>
+                    {qualityText}
+                  </span>
+                  <span style={{ fontSize: 12, color: '#999' }}>
+                    ({maxScaleFactor > 1 ? `${maxScaleFactor.toFixed(1)}x upscale` : `${(1/maxScaleFactor).toFixed(1)}x downscale`})
+                  </span>
+                </div>
+              )
+            })()}
             <button
               onClick={() => doCrop()}
               style={{
